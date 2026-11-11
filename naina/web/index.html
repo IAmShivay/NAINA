@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#564A94">
+<title>NAINA — Personal AI</title>
+<link rel="manifest" href="/manifest.json">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;400;600&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/css/naina.css">
+</head>
+<body>
+
+<canvas id="three-canvas"></canvas>
+<video id="gesture-video" autoplay playsinline style="display:none"></video>
+<canvas id="gesture-canvas" style="display:none"></canvas>
+<div id="gesture-indicator" class="gesture-indicator"></div>
+<div id="hand-cursor" class="hand-cursor"></div>
+
+<!-- Image viewer overlay -->
+<div id="viewer-overlay" class="viewer-overlay">
+  <div class="viewer-bar">
+    <div class="viewer-bar-left">
+      <span class="vb-tag">VIEWER</span>
+      <span id="viewer-label" class="viewer-label"></span>
+    </div>
+    <button class="viewer-close" onclick="closeViewer()">[ CLOSE ]</button>
+  </div>
+  <div class="viewer-body">
+    <img id="viewer-img" class="viewer-img" alt="">
+  </div>
+  <div class="viewer-hint">PINCH — ZOOM &nbsp;|&nbsp; SWIPE — CLOSE &nbsp;|&nbsp; OPEN PALM — CLOSE</div>
+</div>
+
+<!-- Main HUD -->
+<div id="hud" class="hud">
+
+  <!-- Vertical sidebar navigation -->
+  <nav class="sidenav">
+    <div class="sidenav-brand">
+      <span class="brand-letter">N</span>
+    </div>
+    <div class="sidenav-items">
+      <button class="nav-btn active" data-panel="chat">
+        <span class="nav-ico">CH</span>
+        <span class="nav-lbl">CHAT</span>
+      </button>
+      <button class="nav-btn" data-panel="health">
+        <span class="nav-ico">HE</span>
+        <span class="nav-lbl">HEALTH</span>
+      </button>
+      <button class="nav-btn" data-panel="todos">
+        <span class="nav-ico">TS</span>
+        <span class="nav-lbl">TASKS</span>
+      </button>
+      <button class="nav-btn" data-panel="system">
+        <span class="nav-ico">SY</span>
+        <span class="nav-lbl">SYSTEM</span>
+      </button>
+      <button class="nav-btn" data-panel="music">
+        <span class="nav-ico">MU</span>
+        <span class="nav-lbl">MEDIA</span>
+      </button>
+      <button class="nav-btn" data-panel="files">
+        <span class="nav-ico">FI</span>
+        <span class="nav-lbl">FILES</span>
+      </button>
+    </div>
+    <div class="sidenav-footer">
+      <button id="gesture-toggle" class="gesture-nav-btn" title="Toggle gesture control">
+        <span class="nav-ico" id="gesture-ico">GS</span>
+        <span class="nav-lbl" id="gesture-label">GESTURE</span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- Main content area -->
+  <div class="main-area">
+
+    <!-- Top status bar -->
+    <header class="topbar">
+      <div class="tb-left">
+        <div class="tb-status-group">
+          <span class="status-pip" id="status-dot"></span>
+          <span class="tb-item" id="status-text">ONLINE</span>
+        </div>
+        <div class="tb-divider"></div>
+        <span class="tb-item" id="model-label">OLLAMA</span>
+        <div class="tb-divider"></div>
+        <span class="tb-item" id="uptime-label">LOCAL</span>
+      </div>
+      <div class="tb-center">
+        <span class="tb-logo">N A I N A</span>
+        <span class="tb-subtitle">PERSONAL AI SYSTEM</span>
+      </div>
+      <div class="tb-right">
+        <span class="tb-clock" id="clock">--:--:--</span>
+      </div>
+    </header>
+
+    <!-- Panel container -->
+    <div class="panels" id="panels">
+
+      <!-- CHAT -->
+      <div class="panel active" id="panel-chat">
+        <div class="panel-header">
+          <div class="panel-title-row">
+            <span class="panel-tag">01</span>
+            <span class="panel-title">COMMUNICATIONS</span>
+          </div>
+          <div class="panel-status-row">
+            <span class="psr-dot"></span>
+            <span class="psr-text">CHANNEL OPEN</span>
+          </div>
+        </div>
+        <div class="chat-messages" id="chat-messages">
+          <div class="message naina">
+            <div class="msg-meta">
+              <span class="msg-from">NAINA</span>
+              <span class="msg-time" id="boot-time">--:--</span>
+            </div>
+            <div class="msg-body">Namaste Boss. Main Naina hoon. Kya karu aapke liye?</div>
+          </div>
+        </div>
+        <div class="compose-row">
+          <div class="compose-prefix">&gt;_</div>
+          <input type="text" id="chat-input" class="compose-input" placeholder="Enter command..." autocomplete="off">
+          <button id="voice-btn" class="compose-btn">MIC</button>
+          <button id="send-btn" class="compose-btn primary">SEND</button>
+        </div>
+      </div>
+
+      <!-- HEALTH / BIOMETRICS -->
+      <div class="panel" id="panel-health">
+        <div class="panel-header">
+          <div class="panel-title-row">
+            <span class="panel-tag">02</span>
+            <span class="panel-title">BIOMETRICS</span>
+          </div>
+          <button class="panel-action-btn" onclick="window.requestHealth && window.requestHealth()">SYNC DATA</button>
+        </div>
+        <div class="health-grid">
+          <div class="metric-card">
+            <div class="metric-ring-wrap">
+              <svg class="ring-svg" viewBox="0 0 80 80">
+                <circle class="ring-track" cx="40" cy="40" r="32"/>
+                <circle class="ring-progress" id="steps-ring" cx="40" cy="40" r="32"/>
+              </svg>
+              <div class="ring-inner">
+                <div class="ring-val" id="steps-value">—</div>
+              </div>
+            </div>
+            <div class="metric-name">STEPS</div>
+            <div class="metric-sub" id="steps-goal"></div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-ring-wrap">
+              <svg class="ring-svg" viewBox="0 0 80 80">
+                <circle class="ring-track" cx="40" cy="40" r="32"/>
+                <circle class="ring-progress" id="hr-ring" cx="40" cy="40" r="32"/>
+              </svg>
+              <div class="ring-inner">
+                <div class="ring-val" id="hr-value">—</div>
+              </div>
+            </div>
+            <div class="metric-name">HEART RATE</div>
+            <div class="metric-sub">BPM</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-ring-wrap">
+              <svg class="ring-svg" viewBox="0 0 80 80">
+                <circle class="ring-track" cx="40" cy="40" r="32"/>
+                <circle class="ring-progress" id="sleep-ring" cx="40" cy="40" r="32"/>
+              </svg>
+              <div class="ring-inner">
+                <div class="ring-val" id="sleep-value">—</div>
+              </div>
+            </div>
+            <div class="metric-name">SLEEP</div>
+            <div class="metric-sub" id="sleep-score">HRS</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-ring-wrap">
+              <svg class="ring-svg" viewBox="0 0 80 80">
+                <circle class="ring-track" cx="40" cy="40" r="32"/>
+                <circle class="ring-progress" id="spo2-ring" cx="40" cy="40" r="32"/>
+              </svg>
+              <div class="ring-inner">
+                <div class="ring-val" id="spo2-value">—</div>
+              </div>
+            </div>
+            <div class="metric-name">SPO2</div>
+            <div class="metric-sub">PERCENT</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-ring-wrap">
+              <svg class="ring-svg" viewBox="0 0 80 80">
+                <circle class="ring-track" cx="40" cy="40" r="32"/>
+                <circle class="ring-progress" id="stress-ring" cx="40" cy="40" r="32"/>
+              </svg>
+              <div class="ring-inner">
+                <div class="ring-val" id="stress-value">—</div>
+              </div>
+            </div>
+            <div class="metric-name">STRESS</div>
+            <div class="metric-sub">/ 100</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-ring-wrap">
+              <svg class="ring-svg" viewBox="0 0 80 80">
+                <circle class="ring-track" cx="40" cy="40" r="32"/>
+                <circle class="ring-progress" id="cal-ring" cx="40" cy="40" r="32"/>
+              </svg>
+              <div class="ring-inner">
+                <div class="ring-val" id="cal-value">—</div>
+              </div>
+            </div>
+            <div class="metric-name">CALORIES</div>
+            <div class="metric-sub">KCAL</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TODOS / TASKS -->
+      <div class="panel" id="panel-todos">
+        <div class="panel-header">
+          <div class="panel-title-row">
+            <span class="panel-tag">03</span>
+            <span class="panel-title">TASK QUEUE</span>
+          </div>
+          <span class="panel-count" id="todo-count">0 ACTIVE</span>
+        </div>
+        <div class="todos-list" id="todos-list"></div>
+        <div class="compose-row">
+          <div class="compose-prefix">+</div>
+          <input type="text" id="todo-input" class="compose-input" placeholder="New task...">
+          <button id="todo-add-btn" class="compose-btn primary">ADD</button>
+        </div>
+      </div>
+
+      <!-- SYSTEM -->
+      <div class="panel" id="panel-system">
+        <div class="panel-header">
+          <div class="panel-title-row">
+            <span class="panel-tag">04</span>
+            <span class="panel-title">SYSTEM STATUS</span>
+          </div>
+          <button class="panel-action-btn" onclick="window.sendChat && window.sendChat('system stats')">REFRESH</button>
+        </div>
+        <div class="sys-grid">
+          <div class="sys-gauge-card">
+            <div class="sgc-header">
+              <span class="sgc-label">PROCESSOR</span>
+              <span class="sgc-val" id="cpu-val">—%</span>
+            </div>
+            <div class="sgc-track"><div class="sgc-fill" id="cpu-bar" style="width:0%"></div></div>
+            <div class="sgc-ticks"><span>0</span><span>25</span><span>50</span><span>75</span><span>100</span></div>
+          </div>
+          <div class="sys-gauge-card">
+            <div class="sgc-header">
+              <span class="sgc-label">MEMORY</span>
+              <span class="sgc-val" id="ram-val">— GB</span>
+            </div>
+            <div class="sgc-track"><div class="sgc-fill" id="ram-bar" style="width:0%"></div></div>
+            <div class="sgc-ticks"><span>0</span><span>25</span><span>50</span><span>75</span><span>100</span></div>
+          </div>
+          <div class="sys-gauge-card">
+            <div class="sgc-header">
+              <span class="sgc-label">STORAGE</span>
+              <span class="sgc-val" id="disk-val">— GB</span>
+            </div>
+            <div class="sgc-track"><div class="sgc-fill" id="disk-bar" style="width:0%"></div></div>
+            <div class="sgc-ticks"><span>0</span><span>25</span><span>50</span><span>75</span><span>100</span></div>
+          </div>
+          <div class="sys-gauge-card">
+            <div class="sgc-header">
+              <span class="sgc-label">BATTERY</span>
+              <span class="sgc-val" id="batt-val">—%</span>
+            </div>
+            <div class="sgc-track"><div class="sgc-fill" id="batt-bar" style="width:100%"></div></div>
+            <div class="sgc-ticks"><span>0</span><span>25</span><span>50</span><span>75</span><span>100</span></div>
+          </div>
+        </div>
+        <div class="sys-actions">
+          <button class="action-btn" onclick="window.sendChat && window.sendChat('lock screen')">LOCK SCREEN</button>
+          <button class="action-btn" onclick="window.sendChat && window.sendChat('take screenshot')">SCREENSHOT</button>
+          <button class="action-btn danger" onclick="if(confirm('Confirm shutdown?')) window.sendChat && window.sendChat('shutdown pc')">SHUTDOWN</button>
+        </div>
+      </div>
+
+      <!-- MUSIC / MEDIA -->
+      <div class="panel" id="panel-music">
+        <div class="panel-header">
+          <div class="panel-title-row">
+            <span class="panel-tag">05</span>
+            <span class="panel-title">MUSIC</span>
+          </div>
+        </div>
+
+        <!-- Now playing bar -->
+        <div class="music-now-playing" id="music-now-playing">
+          <span class="music-now-label">NO TRACK</span>
+          <span class="music-now-title" id="music-now-title">--</span>
+        </div>
+
+        <!-- Waveform (animates when playing) -->
+        <div class="waveform" id="music-wave">
+          <span></span><span></span><span></span><span></span><span></span>
+          <span></span><span></span><span></span><span></span><span></span>
+        </div>
+
+        <!-- Playback controls -->
+        <div class="media-controls">
+          <button class="media-btn" id="music-prev-btn">
+            <span class="media-ico">|&lt;</span><span class="media-lbl">PREV</span>
+          </button>
+          <button class="media-btn large" id="music-play-btn">
+            <span class="media-ico" id="music-play-ico">&gt;</span><span class="media-lbl" id="music-play-lbl">PLAY</span>
+          </button>
+          <button class="media-btn" id="music-next-btn">
+            <span class="media-ico">&gt;|</span><span class="media-lbl">NEXT</span>
+          </button>
+        </div>
+
+        <!-- Search + song list -->
+        <div class="compose-row" style="margin-top:12px">
+          <div class="compose-prefix">?</div>
+          <input type="text" id="music-search" class="compose-input" placeholder="Search local songs...">
+        </div>
+        <div class="music-list" id="music-list">
+          <div class="music-list-empty">Loading songs...</div>
+        </div>
+      </div>
+
+      <!-- FILES -->
+      <div class="panel" id="panel-files">
+        <div class="panel-header">
+          <div class="panel-title-row">
+            <span class="panel-tag">06</span>
+            <span class="panel-title">FILE SYSTEM</span>
+          </div>
+          <button class="panel-action-btn" onclick="window.fileGoUp && window.fileGoUp()">GO UP</button>
+        </div>
+        <div class="file-path-row">
+          <span class="file-path-prefix">PATH:</span>
+          <span class="file-crumb" id="file-crumb"></span>
+        </div>
+        <div class="file-grid" id="file-grid">
+          <div class="file-loading">LOADING...</div>
+        </div>
+        <div class="file-hint">PINCH OR DWELL — OPEN &nbsp;|&nbsp; OPEN PALM — UP</div>
+      </div>
+
+    </div><!-- /panels -->
+
+    <!-- Voice bar -->
+    <footer class="voicebar" id="voice-bar">
+      <div class="vb-indicator" id="voice-ring"></div>
+      <div class="vb-waveform" id="vb-waveform">
+        <span></span><span></span><span></span><span></span><span></span>
+        <span></span><span></span><span></span><span></span><span></span>
+      </div>
+      <div class="vb-text" id="voice-text">SAY "HEY NAINA" OR TAP MIC</div>
+      <div class="vb-right">
+        <button id="voice-btn-bar" class="vb-mic-btn">MIC</button>
+      </div>
+    </footer>
+
+  </div><!-- /main-area -->
+</div><!-- /hud -->
+
+<!-- Kill any cached service workers immediately — prevents stale JS from loading -->
+<script>
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.getRegistrations().then(regs => {
+    regs.forEach(r => r.unregister());
+  });
+  caches.keys().then(keys => keys.forEach(k => caches.delete(k)));
+}
+</script>
+
+<!-- Live reload — auto-refreshes browser on any file change (dev) -->
+<script>
+!function(){
+  var _v = null;
+  setInterval(async function(){
+    try {
+      var r = await fetch('/api/livereload');
+      var d = await r.json();
+      if (_v === null) { _v = d.v; return; }
+      if (d.v !== _v) { _v = d.v; location.reload(); }
+    } catch(_) {}
+  }, 900);
+}();
+</script>
+
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.148.0/build/three.module.js"}}</script>
+<script type="module" src="/static/js/three-scene.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4/hands.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+<script type="module" src="/static/js/gesture.js"></script>
+<script type="module" src="/static/js/voice.js"></script>
+<script type="module" src="/static/js/app.js"></script>
+</body>
+</html>
